@@ -1,8 +1,6 @@
 package com.wft.producer.configuration;
 
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,19 +12,25 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitServerConfiguration extends AbstractStockAppRabbitConfiguration {
 
-    @Bean
-    public Queue defaultQueue() {
-        return new Queue("app.stock.request");
-    }
+
 
     @Value("${stocks.quote.pattern}")
     private String marketDataRoutingKey;
 
 
     @Bean
-    public Queue marketDataQueue() {
-        // autodelete exclusive独占
-        return rabbitAdmin().declareQueue();
+    public DirectExchange marketDataExchange() {
+        return new DirectExchange("app.stock.marketdirect");
+    }
+
+    @Bean
+    public DirectExchange noque() {
+        return new DirectExchange("app.stock.noque");
+    }
+
+    @Bean
+    public Queue requestQueue() {
+        return new Queue("app.stock.request");
     }
 
     /**
@@ -37,7 +41,7 @@ public class RabbitServerConfiguration extends AbstractStockAppRabbitConfigurati
     @Bean
     public Binding marketDataBinding() {
         return BindingBuilder
-                .bind(defaultQueue())
+                .bind(requestQueue())
                 .to(marketDataExchange())
                 .with(marketDataRoutingKey);
     }

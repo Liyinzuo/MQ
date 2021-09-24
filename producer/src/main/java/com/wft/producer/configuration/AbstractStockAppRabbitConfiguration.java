@@ -1,11 +1,11 @@
 package com.wft.producer.configuration;
 
-import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.core.ReturnedMessage;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.amqp.rabbit.connection.SimplePropertyValueConnectionNameStrategy;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,7 +42,12 @@ public abstract class AbstractStockAppRabbitConfiguration {
     @Bean
     public CachingConnectionFactory connectionFactory() {
         // 默认配置
-        return new CachingConnectionFactory(host);
+        CachingConnectionFactory cachingConnectionFactory = new CachingConnectionFactory(host);
+        // 消息 -> exchange失败调用
+        cachingConnectionFactory.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
+        // 确认消息发送到队列
+        cachingConnectionFactory.setPublisherReturns(true);
+        return cachingConnectionFactory;
     }
 
     /**
@@ -52,23 +57,32 @@ public abstract class AbstractStockAppRabbitConfiguration {
     @Bean
     public RabbitTemplate rabbitTemplate() {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory());
-        rabbitTemplate.setMessageConverter(jsonMessageConverter());
+        // 触发回调函数
+        rabbitTemplate.setMandatory(true);
+
+        rabbitTemplate.setReturnsCallback(new RabbitTemplate.ReturnsCallback() {
+            @Override
+            public void returnedMessage(ReturnedMessage returnedMessage) {
+                System.err.println("ReturnsCallback:    " + "消息:" + returnedMessage.getMessage());
+                System.err.println("ReturnsCallback:    " + "回应码:" + returnedMessage.getReplyCode());
+                System.err.println("ReturnsCallback:    " + "回应消息:" + returnedMessage.getReplyText());
+                System.err.println("ReturnsCallback:    " + "交换机:" + returnedMessage.getExchange());
+                System.err.println("ReturnsCallback:    " + "路由:" + returnedMessage.getRoutingKey());
+            }
+        });
+
+        rabbitTemplate.setConfirmCallback(new RabbitTemplate.ConfirmCallback() {
+            @Override
+            public void confirm(CorrelationData correlationData, boolean b, String s) {
+                System.out.println("ConfirmCallback:     "+"相关数据："+correlationData);
+                System.out.println("ConfirmCallback:     "+"确认情况："+b);
+                System.out.println("ConfirmCallback:     "+"原因："+s);
+            }
+        });
         return rabbitTemplate;
     }
 
-    /**
-     * 解码器
-     * @return
-     */
-    @Bean
-    public Jackson2JsonMessageConverter jsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
-    }
 
 
-    @Bean
-    public TopicExchange marketDataExchange() {
-        return new TopicExchange("app.stock.marketdata");
-    }
 
 }
