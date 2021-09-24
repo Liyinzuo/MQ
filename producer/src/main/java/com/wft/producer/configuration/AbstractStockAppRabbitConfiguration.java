@@ -57,9 +57,9 @@ public abstract class AbstractStockAppRabbitConfiguration {
     @Bean
     public RabbitTemplate rabbitTemplate() {
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory());
-        // 触发回调函数
+        // 触发ReturnsCallback回调函数开关
         rabbitTemplate.setMandatory(true);
-
+        // SERVER-EXCHANGE
         rabbitTemplate.setReturnsCallback(new RabbitTemplate.ReturnsCallback() {
             @Override
             public void returnedMessage(ReturnedMessage returnedMessage) {
@@ -70,7 +70,7 @@ public abstract class AbstractStockAppRabbitConfiguration {
                 System.err.println("ReturnsCallback:    " + "路由:" + returnedMessage.getRoutingKey());
             }
         });
-
+        //EXCHANGE-QUEUE
         rabbitTemplate.setConfirmCallback(new RabbitTemplate.ConfirmCallback() {
             @Override
             public void confirm(CorrelationData correlationData, boolean b, String s) {
