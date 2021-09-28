@@ -1,9 +1,10 @@
 package com.wft.producer.configuration;
 
+import com.rabbitmq.client.Channel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.ReturnedMessage;
-import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
-import org.springframework.amqp.rabbit.connection.CorrelationData;
-import org.springframework.amqp.rabbit.connection.SimplePropertyValueConnectionNameStrategy;
+import org.springframework.amqp.rabbit.connection.*;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,6 +17,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public abstract class AbstractStockAppRabbitConfiguration {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractStockAppRabbitConfiguration.class);
 
     @Value("${spring.rabbitmq.host}")
     public String host;
@@ -47,6 +50,20 @@ public abstract class AbstractStockAppRabbitConfiguration {
         cachingConnectionFactory.setPublisherConfirmType(CachingConnectionFactory.ConfirmType.CORRELATED);
         // 确认消息发送到队列
         cachingConnectionFactory.setPublisherReturns(true);
+
+        cachingConnectionFactory.addConnectionListener(new ConnectionListener() {
+            @Override
+            public void onCreate(Connection connection) {
+                LOG.info("ConnectionListener 连接成功 ");
+            }
+        });
+
+        cachingConnectionFactory.addChannelListener(new ChannelListener() {
+            @Override
+            public void onCreate(Channel channel, boolean b) {
+                LOG.info("ChannelListener 连接成功 ");
+            }
+        });
         return cachingConnectionFactory;
     }
 

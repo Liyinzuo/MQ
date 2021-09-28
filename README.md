@@ -1,2 +1,2 @@
 # MQ
-深度学习RabbitMq
+RabbitMq Demo
